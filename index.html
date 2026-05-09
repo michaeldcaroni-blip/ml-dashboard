@@ -32,6 +32,7 @@ window._fbLoaded = false;
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"
   onerror="document.getElementById('fbCdnErr').style.display='block'"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <!-- Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
@@ -99,6 +100,23 @@ textarea#rawInput:focus{outline:2px solid var(--blue-mid);border-color:transpare
 .btn-primary:hover{opacity:.88;}
 .btn-secondary{background:var(--surface);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 11px;font-size:11px;cursor:pointer;}
 .btn-secondary:hover{background:var(--surface2);}
+.btn-fechar{background:linear-gradient(135deg,#1b5e20,#2e7d32);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 15px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.btn-fechar:hover{opacity:.88;}
+
+/* ── MODAL FECHAR TURNO ── */
+.ft-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.ft-modal{background:#fff;border-radius:14px;padding:26px;max-width:480px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.28);}
+.ft-modal h2{font-size:16px;font-weight:700;color:#1b5e20;margin-bottom:4px;}
+.ft-modal .ft-sub{font-size:12px;color:var(--text2);margin-bottom:16px;}
+.ft-fields{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.ft-fields label{font-size:12px;font-weight:600;color:var(--text2);}
+.ft-fields select,.ft-fields input{border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;background:var(--surface2);color:var(--text);width:100%;}
+.ft-summary{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:12px;line-height:1.8;}
+.ft-summary strong{color:var(--text);}
+.ft-btns{display:flex;gap:8px;justify-content:flex-end;}
+.ft-status{font-size:12px;padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:12px;display:none;}
+.ft-status.ok{background:var(--green-bg);color:var(--green);display:block;}
+.ft-status.err{background:var(--red-bg);color:var(--red);display:block;}
 #parseStatus{font-size:12px;padding:6px 10px;border-radius:var(--radius-sm);display:none;margin-top:4px;}
 #parseStatus.ok{background:var(--green-bg);color:var(--green);display:block;}
 #parseStatus.err{background:var(--red-bg);color:var(--red);display:block;}
@@ -383,6 +401,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
       <button class="btn-primary" onclick="importData()">▶ Importar e Sincronizar</button>
       <button class="btn-secondary" onclick="loadSampleData()">Carregar exemplo</button>
       <button class="btn-secondary" onclick="document.getElementById('rawInput').value=''">Limpar</button>
+      <button class="btn-fechar" onclick="fecharTurno()">📦 Fechar Turno e Salvar Histórico</button>
     </div>
   </div>
   <div id="parseStatus"></div>
@@ -565,6 +584,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
 // FIREBASE CONFIG — preenchida pelo usuário
 // ═══════════════════════════════════════════════════
 let db = null;
+let fstore = null; // Firestore — banco histórico
 let firebaseConnected = false;
 let fbConfig = JSON.parse(localStorage.getItem('ssp36_fbconfig') || 'null');
 
@@ -652,6 +672,7 @@ function autoConnect() {
   try {
     if (!firebase.apps.length) firebase.initializeApp(fbConfig);
     db = firebase.database();
+    fstore = firebase.firestore();
     db.ref('.info/connected').on('value', snap => {
       setConnectionStatus(snap.val());
       if (snap.val() && !firebaseConnected) {
@@ -1409,5 +1430,156 @@ document.getElementById('fb-apikey').value = fbConfig.apiKey || PRE_CONFIG.apiKe
 document.getElementById('fb-projectid').value = fbConfig.projectId || PRE_CONFIG.projectId;
 autoConnect();
 </script>
+<!-- MODAL FECHAR TURNO -->
+<div class="ft-overlay" id="ftOverlay" style="display:none" onclick="if(event.target===this)closeFtModal()">
+  <div class="ft-modal">
+    <h2>📦 Fechar Turno e Salvar Histórico</h2>
+    <p class="ft-sub">Os dados atuais serão gravados permanentemente no banco histórico (Firestore) para análises futuras.</p>
+    <div class="ft-fields">
+      <div>
+        <label>Ciclo do turno</label>
+        <select id="ft-ciclo">
+          <option value="AM">AM — Manhã</option>
+          <option value="PM">PM — Tarde</option>
+          <option value="SD">SD — Dia todo</option>
+        </select>
+      </div>
+      <div>
+        <label>Data da operação</label>
+        <input type="date" id="ft-data">
+      </div>
+      <div>
+        <label>Operador responsável</label>
+        <input type="text" id="ft-operador" placeholder="Seu nome ou matrícula">
+      </div>
+    </div>
+    <div class="ft-summary" id="ftSummary">Carregando resumo...</div>
+    <div class="ft-status" id="ftStatus"></div>
+    <div class="ft-btns">
+      <button class="btn-secondary" onclick="closeFtModal()">Cancelar</button>
+      <button class="btn-fechar" onclick="confirmarFechamento()">✅ Confirmar e Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// FECHAR TURNO — salva histórico no Firestore
+// ═══════════════════════════════════════════════════
+function fecharTurno() {
+  if (!fstore) { alert('Conecte o Firebase primeiro.'); return; }
+  if (!drivers || drivers.length === 0) { alert('Importe os dados antes de fechar o turno.'); return; }
+
+  // Preencher data de hoje
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('ft-data').value = hoje;
+
+  // Montar resumo
+  const total = drivers.reduce((s,d)=>s+d.spr,0);
+  const ok    = drivers.reduce((s,d)=>s+d.ok,0);
+  const pend  = drivers.reduce((s,d)=>s+d.pend,0);
+  const fail  = drivers.reduce((s,d)=>s+d.fail,0);
+  const ds    = total > 0 ? (ok/total*100).toFixed(1) : '0';
+  const conc  = drivers.filter(d=>d.status==='Concluída').length;
+
+  document.getElementById('ftSummary').innerHTML = `
+    <strong>Operação:</strong> ${currentOperation} &nbsp;|&nbsp; <strong>Rotas:</strong> ${drivers.length}<br>
+    <strong>Pacotes SPR:</strong> ${total.toLocaleString('pt-BR')} &nbsp;|&nbsp; <strong>DS%:</strong> ${ds}%<br>
+    <strong>Bem-sucedidos:</strong> ${ok.toLocaleString('pt-BR')} &nbsp;|&nbsp; <strong>Pendentes:</strong> ${pend} &nbsp;|&nbsp; <strong>Falhas:</strong> ${fail}<br>
+    <strong>Rotas concluídas:</strong> ${conc} de ${drivers.length}
+  `;
+
+  document.getElementById('ftStatus').style.display = 'none';
+  document.getElementById('ftOverlay').style.display = 'flex';
+}
+
+function closeFtModal() {
+  document.getElementById('ftOverlay').style.display = 'none';
+}
+
+async function confirmarFechamento() {
+  if (!fstore) return;
+  const ciclo    = document.getElementById('ft-ciclo').value;
+  const data     = document.getElementById('ft-data').value;
+  const operador = document.getElementById('ft-operador').value.trim() || 'operador';
+  const statusEl = document.getElementById('ftStatus');
+
+  if (!data) { statusEl.textContent = 'Informe a data.'; statusEl.className='ft-status err'; return; }
+
+  statusEl.textContent = '⏳ Salvando...';
+  statusEl.className = 'ft-status ok';
+
+  try {
+    const total = drivers.reduce((s,d)=>s+d.spr,0);
+    const ok    = drivers.reduce((s,d)=>s+d.ok,0);
+    const pend  = drivers.reduce((s,d)=>s+d.pend,0);
+    const fail  = drivers.reduce((s,d)=>s+d.fail,0);
+    const ds    = total > 0 ? parseFloat((ok/total*100).toFixed(2)) : 0;
+    const conc  = drivers.filter(d=>d.status==='Concluída').length;
+    const ts    = new Date().toISOString();
+
+    // 1 — Documento resumo do turno
+    const turnoRef = fstore.collection('historico')
+      .doc(currentOperation)
+      .collection('turnos')
+      .doc(`${data}_${ciclo}`);
+
+    await turnoRef.set({
+      operacao:   currentOperation,
+      data,
+      ciclo,
+      operador,
+      timestamp:  ts,
+      totalRotas: drivers.length,
+      totalSPR:   total,
+      okTotal:    ok,
+      pendTotal:  pend,
+      failTotal:  fail,
+      dsGeral:    ds,
+      concluidas: conc,
+    });
+
+    // 2 — Sub-coleção com cada rota individualmente
+    const batch = fstore.batch();
+    drivers.forEach(d => {
+      const rotaRef = turnoRef.collection('rotas').doc(d.id || d.rota);
+      batch.set(rotaRef, {
+        rota:        d.rota,
+        idRota:      d.id || '',
+        motorista:   d.nome || '',
+        tipoVeiculo: d.tipoVeiculo || '',
+        status:      d.status || '',
+        spr:         d.spr || 0,
+        ok:          d.ok || 0,
+        pend:        d.pend || 0,
+        fail:        d.fail || 0,
+        ds:          d.spr > 0 ? parseFloat((d.ok/d.spr*100).toFixed(2)) : 0,
+        orhPlan:     d.orhPlan || '—',
+        orhExec:     d.orhExec || '—',
+        ozh:         d.ozh || '—',
+        atrasada:    d.atrasada || false,
+        isMista:     d.isMista || false,
+        nexAgencia:  d.nexAgencia || '',
+        operacao:    currentOperation,
+        ciclo,
+        data,
+      });
+    });
+    await batch.commit();
+
+    statusEl.textContent = `✅ Turno ${ciclo} do dia ${data} salvo com sucesso! ${drivers.length} rotas gravadas no histórico.`;
+    statusEl.className = 'ft-status ok';
+
+    // Fechar modal após 2.5s
+    setTimeout(closeFtModal, 2500);
+
+  } catch(e) {
+    console.error('Firestore save error:', e);
+    statusEl.textContent = '❌ Erro ao salvar: ' + e.message;
+    statusEl.className = 'ft-status err';
+  }
+}
+</script>
+
 </body>
 </html>
