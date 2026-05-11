@@ -1140,7 +1140,7 @@ function renderTable(){
     </tr>`;
   }
   const totDs=totSpr>0?((totOk/totSpr)*100).toFixed(1)+'%':'—';
-  const pkgHList = filtered.map(d=>pkgPorHora(d)).filter(v=>v!==null).map(v=>parseFloat(v));
+  const pkgHList = data.map(d=>pkgPorHora(d)).filter(v=>v!==null).map(v=>parseFloat(v));
   const pkgHMedia = pkgHList.length ? (pkgHList.reduce((a,b)=>a+b,0)/pkgHList.length).toFixed(1) : null;
   rows+=`<tr class="total-row">
     <td colspan="2" style="font-weight:700;font-size:11px">TOTAL GERAL</td>
