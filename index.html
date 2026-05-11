@@ -923,9 +923,14 @@ function parseText(raw){
     if(spr===0){ const u=block.match(/(\d+)\s+unidades?/i); if(u) spr=+u[1]; }
     if(spr===0 && (sprEntrega+sprColeta)>0) spr=sprEntrega+sprColeta;
 
-    const ozhM  = block.match(/OZH[\s\S]{0,50}?(\d{1,2}:\d{2})\s*h(?!s)/i);
-    const execM = block.match(/Executado[\s\S]{0,15}?(\d{1,2}:\d{2})\s*hs?/i);
-    const planM = block.match(/Planejado[\s\S]{0,15}?(\d{1,2}:\d{2})\s*hs?/i);
+    const ozhM  = block.match(/OZH[\s\S]{0,80}?(\d{1,2}:\d{2})\s*h?s?\b/i)
+               || block.match(/(\d{1,2}:\d{2})\s*hs?\s*OZH/i);
+    const execM = block.match(/Executad[oa][\s\S]{0,30}?(\d{1,2}:\d{2})\s*hs?/i)
+               || block.match(/ORH[\s\S]{0,10}Exec[\s\S]{0,10}?(\d{1,2}:\d{2})/i)
+               || block.match(/(\d{1,2}:\d{2})\s*hs?\s*\/\s*\d{1,2}:\d{2}\s*hs?\s*ORH/i);
+    const planM = block.match(/Planejad[oa][\s\S]{0,30}?(\d{1,2}:\d{2})\s*hs?/i)
+               || block.match(/ORH[\s\S]{0,10}Plan[\s\S]{0,10}?(\d{1,2}:\d{2})/i)
+               || block.match(/\d{1,2}:\d{2}\s*hs?\s*\/\s*(\d{1,2}:\d{2})\s*hs?\s*ORH/i);
 
     let nome = '';
     for(const line of bLines){
@@ -983,6 +988,8 @@ function parseText(raw){
       isMista: (sprEntrega+sprColeta)>0,
       sprEntrega, sprColeta,
     });
+    // Debug — remover após confirmar
+    if(ozhM||execM) console.log(`[DEBUG] ${rotaRaw} | OZH=${ozhM?ozhM[1]:'—'} | ORHExec=${execM?execM[1]:'—'} | ORHPlan=${planM?planM[1]:'—'}`);
   }
   return results;
 }
