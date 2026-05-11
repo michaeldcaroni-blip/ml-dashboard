@@ -511,6 +511,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
         <th onclick="sortTable('fail')">Falhas ↕</th>
         <th onclick="sortTable('pct')">DS % ↕</th>
         <th onclick="sortTable('ozh')">OZH ↕</th>
+        <th onclick="sortTable('pkgH')" title="Pacotes entregues por hora">Pkg/h ↕</th>
         <th onclick="sortTable('orh')">ORH Exec/Plan ↕</th>
         <th>Últ. Entrega</th>
         <th>Status</th>
@@ -816,6 +817,24 @@ function removePausedFb(id) {
 // ═══════════════════════════════════════════════════
 function pct(d){ return d.spr>0?Math.round(d.ok/d.spr*100):0; }
 function pctColor(p){ return p>=80?'#2e7d32':p>=50?'#e65100':'#b71c1c'; }
+
+// Calcula pacotes entregues por hora — usa OZH, fallback para ORH Executado
+function pkgPorHora(d) {
+  const horaStr = (d.ozh && d.ozh !== '—') ? d.ozh : (d.orhExec && d.orhExec !== '—') ? d.orhExec : null;
+  if (!horaStr || d.ok === 0) return null;
+  const hrs = timeToHrs(horaStr);
+  if (hrs <= 0) return null;
+  return (d.ok / hrs).toFixed(1);
+}
+function pkgPorHoraColor(v) {
+  if (v === null) return 'var(--text3)';
+  const n = parseFloat(v);
+  return n >= 15 ? '#1b5e20' : n >= 10 ? '#e65100' : '#b71c1c';
+}
+function pkgPorHoraLabel(v) {
+  if (v === null) return '—';
+  return v + ' <small style="font-size:9px;font-weight:400">pkg/h</small>';
+}
 function timeToHrs(t){ if(!t||t==='—')return 0; const[h,m]=t.split(':').map(Number); return h+m/60; }
 function toTitleCase(str){
   const mi=['de','da','do','das','dos','e','a','o'];
@@ -1039,6 +1058,7 @@ function renderQuickView(){
         <div class="qv-bar"><div class="qv-bar-fill" style="width:${p}%;background:${pc}"></div></div>
         <span class="qv-pct" style="color:${pc}">${p}%</span>
       </div>
+      ${(()=>{const v=pkgPorHora(d);return v?`<div style="font-size:10px;font-weight:700;color:${pkgPorHoraColor(v)};margin-top:3px">⚡ ${v} pkg/h</div>`:''})()}
       <div class="qv-badges">${badges.join('')||'<span style="font-size:10px;color:var(--text3)">sem alertas</span>'}</div>
     </div>`;
   }).join('');
@@ -1078,10 +1098,10 @@ function renderTable(){
   else if(currentFilter==='low')data=data.filter(d=>pct(d)<50);
   else if(currentFilter==='concluida')data=data.filter(d=>d.status==='Concluída');
   if(q)data=data.filter(d=>d.nome.toLowerCase().includes(q)||d.rota.toLowerCase().includes(q));
-  const get=d=>({rota:d.rota,nome:d.nome,spr:d.spr,ok:d.ok,pend:d.pend,fail:d.fail,pct:pct(d),ozh:timeToHrs(d.ozh),orh:timeToHrs(d.orhExec)}[sortKey2]||0);
+  const get=d=>({rota:d.rota,nome:d.nome,spr:d.spr,ok:d.ok,pend:d.pend,fail:d.fail,pct:pct(d),ozh:timeToHrs(d.ozh),orh:timeToHrs(d.orhExec),pkgH:parseFloat(pkgPorHora(d))||0}[sortKey2]||0);
   data.sort((a,b)=>sortAsc2?(get(a)>get(b)?1:-1):(get(a)<get(b)?1:-1));
   const tb=document.getElementById('tableBody');
-  if(!data.length){tb.innerHTML='<tr><td colspan="13" style="text-align:center;padding:18px;color:var(--text3)">Nenhum resultado</td></tr>';return;}
+  if(!data.length){tb.innerHTML='<tr><td colspan="14" style="text-align:center;padding:18px;color:var(--text3)">Nenhum resultado</td></tr>';return;}
   let rows='',totSpr=0,totOk=0,totPend=0,totFail=0;
   for(const d of data){
     const p=pct(d),pc=pctColor(p);
@@ -1107,6 +1127,7 @@ function renderTable(){
       <td style="text-align:center;color:${d.fail>0?'var(--red)':'var(--text3)'};font-weight:${d.fail>0?700:400}">${d.fail}${d.fail>0?`<br><small style="font-size:9px;font-weight:400">${fp}%</small>`:''}</td>
       <td><div style="display:flex;align-items:center;gap:5px"><div class="pbar"><div class="pbar-fill" style="width:${p}%;background:${pc}"></div></div><span style="font-size:11px;font-weight:700;color:${pc};min-width:30px">${p}%</span></div></td>
       <td style="text-align:center;white-space:nowrap">${d.ozh}</td>
+      <td style="text-align:center;font-weight:700;color:${pkgPorHoraColor(pkgPorHora(d))}">${pkgPorHoraLabel(pkgPorHora(d))}</td>
       <td style="text-align:center;white-space:nowrap">${d.orhExec} <span style="color:var(--text3);font-size:9px">/ ${d.orhPlan}</span></td>
       <td style="text-align:center">${lastDel}</td>
       <td>${statusBadge}</td>
@@ -1115,6 +1136,8 @@ function renderTable(){
     </tr>`;
   }
   const totDs=totSpr>0?((totOk/totSpr)*100).toFixed(1)+'%':'—';
+  const pkgHList = filtered.map(d=>pkgPorHora(d)).filter(v=>v!==null).map(v=>parseFloat(v));
+  const pkgHMedia = pkgHList.length ? (pkgHList.reduce((a,b)=>a+b,0)/pkgHList.length).toFixed(1) : null;
   rows+=`<tr class="total-row">
     <td colspan="2" style="font-weight:700;font-size:11px">TOTAL GERAL</td>
     <td style="text-align:center">${totSpr}</td>
@@ -1122,7 +1145,9 @@ function renderTable(){
     <td style="text-align:center;color:var(--amber-mid)">${totPend}</td>
     <td style="text-align:center;color:var(--red)">${totFail}</td>
     <td><span style="font-size:12px;font-weight:700;color:var(--blue)">${totDs}</span></td>
-    <td colspan="6" style="color:var(--text3);font-size:10px">DS Geral do dia: ${totDs}</td>
+    <td colspan="2" style="color:var(--text3);font-size:10px">DS Geral: ${totDs}</td>
+    <td style="text-align:center;font-weight:700;color:${pkgPorHoraColor(pkgHMedia)}">${pkgHMedia ? pkgHMedia + ' <small style="font-size:9px;font-weight:400">pkg/h</small>' : '—'}</td>
+    <td colspan="4" style="color:var(--text3);font-size:10px">média da operação</td>
   </tr>`;
   tb.innerHTML=rows;
 }
