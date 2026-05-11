@@ -923,14 +923,11 @@ function parseText(raw){
     if(spr===0){ const u=block.match(/(\d+)\s+unidades?/i); if(u) spr=+u[1]; }
     if(spr===0 && (sprEntrega+sprColeta)>0) spr=sprEntrega+sprColeta;
 
-    const ozhM  = block.match(/OZH[\s\S]{0,80}?(\d{1,2}:\d{2})\s*h?s?\b/i)
-               || block.match(/(\d{1,2}:\d{2})\s*hs?\s*OZH/i);
-    const execM = block.match(/Executad[oa][\s\S]{0,30}?(\d{1,2}:\d{2})\s*hs?/i)
-               || block.match(/ORH[\s\S]{0,10}Exec[\s\S]{0,10}?(\d{1,2}:\d{2})/i)
-               || block.match(/(\d{1,2}:\d{2})\s*hs?\s*\/\s*\d{1,2}:\d{2}\s*hs?\s*ORH/i);
-    const planM = block.match(/Planejad[oa][\s\S]{0,30}?(\d{1,2}:\d{2})\s*hs?/i)
-               || block.match(/ORH[\s\S]{0,10}Plan[\s\S]{0,10}?(\d{1,2}:\d{2})/i)
-               || block.match(/\d{1,2}:\d{2}\s*hs?\s*\/\s*(\d{1,2}:\d{2})\s*hs?\s*ORH/i);
+    // OZH: "OZH\nHoras na área de entrega\n02:18 h"
+    const ozhM  = block.match(/OZH[\s\S]{0,60}?(\d{1,2}:\d{2})\s*h\b/i);
+    // ORH Exec/Plan: "Executado 03:11hs Planejado 03:35hs"
+    const execM = block.match(/Executado\s+(\d{1,2}:\d{2})\s*hs?/i);
+    const planM = block.match(/Planejado\s+(\d{1,2}:\d{2})\s*hs?/i);
 
     let nome = '';
     for(const line of bLines){
