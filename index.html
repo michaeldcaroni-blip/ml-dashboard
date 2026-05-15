@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -307,7 +307,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
     </div>
     <div class="divider-v"></div>
     <div class="header-title">
-      <h1>Dashboard de Rotas <span class="op-name-badge" id="opNameBadge">SSP36</span></h1>
+      <h1>Dashboard de Rotas <span class="op-name-badge" id="opNameBadge">SSP6</span></h1>
       <div class="meta" id="headerMeta">Conectando ao Firebase...</div>
     </div>
   </div>
@@ -322,17 +322,44 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
 
 <!-- OPERATION TABS -->
 <div class="ops-tabs" id="opsTabs">
-  <button class="ops-tab active" data-op="SSP36" onclick="switchOperation('SSP36',this)">
-    <span class="ops-indicator" id="ind-SSP36"></span>SSP36
+  <button class="ops-tab active" data-op="SSP6" onclick="switchOperation('SSP6',this)">
+    <span class="ops-indicator empty" id="ind-SSP6"></span>SSP6
   </button>
   <button class="ops-tab" data-op="SSP9" onclick="switchOperation('SSP9',this)">
     <span class="ops-indicator empty" id="ind-SSP9"></span>SSP9
   </button>
-  <button class="ops-tab" data-op="SSP38" onclick="switchOperation('SSP38',this)">
-    <span class="ops-indicator empty" id="ind-SSP38"></span>SSP38
+  <button class="ops-tab" data-op="SSP15" onclick="switchOperation('SSP15',this)">
+    <span class="ops-indicator empty" id="ind-SSP15"></span>SSP15
+  </button>
+  <button class="ops-tab" data-op="SSP17" onclick="switchOperation('SSP17',this)">
+    <span class="ops-indicator empty" id="ind-SSP17"></span>SSP17
+  </button>
+  <button class="ops-tab" data-op="SSP18" onclick="switchOperation('SSP18',this)">
+    <span class="ops-indicator empty" id="ind-SSP18"></span>SSP18
+  </button>
+  <button class="ops-tab" data-op="SSP20" onclick="switchOperation('SSP20',this)">
+    <span class="ops-indicator empty" id="ind-SSP20"></span>SSP20
+  </button>
+  <button class="ops-tab" data-op="SSP25" onclick="switchOperation('SSP25',this)">
+    <span class="ops-indicator empty" id="ind-SSP25"></span>SSP25
+  </button>
+  <button class="ops-tab" data-op="SSP27" onclick="switchOperation('SSP27',this)">
+    <span class="ops-indicator empty" id="ind-SSP27"></span>SSP27
   </button>
   <button class="ops-tab" data-op="SSP29" onclick="switchOperation('SSP29',this)">
     <span class="ops-indicator empty" id="ind-SSP29"></span>SSP29
+  </button>
+  <button class="ops-tab" data-op="SSP36" onclick="switchOperation('SSP36',this)">
+    <span class="ops-indicator empty" id="ind-SSP36"></span>SSP36
+  </button>
+  <button class="ops-tab" data-op="SSP38" onclick="switchOperation('SSP38',this)">
+    <span class="ops-indicator empty" id="ind-SSP38"></span>SSP38
+  </button>
+  <button class="ops-tab" data-op="SSP45" onclick="switchOperation('SSP45',this)">
+    <span class="ops-indicator empty" id="ind-SSP45"></span>SSP45
+  </button>
+  <button class="ops-tab" data-op="SSP46" onclick="switchOperation('SSP46',this)">
+    <span class="ops-indicator empty" id="ind-SSP46"></span>SSP46
   </button>
 </div>
 
@@ -413,7 +440,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
 
 <!-- KPIs -->
 <div class="kpi-grid" id="kpiGrid" style="display:none">
-  <div class="kpi"><div class="k-label">Total Rotas</div><div class="k-val" id="k-rotas">—</div><div class="k-sub">SSP36</div></div>
+  <div class="kpi"><div class="k-label">Total Rotas</div><div class="k-val" id="k-rotas">—</div><div class="k-sub" id="k-rotas-op">SSP6</div></div>
   <div class="kpi"><div class="k-label">Total Pacotes</div><div class="k-val" id="k-pacotes">—</div><div class="k-sub">SPR total</div></div>
   <div class="kpi kpi-green"><div class="k-label">Bem-sucedidos</div><div class="k-val" id="k-ok">—</div><div class="k-sub" id="k-ok-pct">—</div></div>
   <div class="kpi kpi-amber"><div class="k-label">Pendentes</div><div class="k-val" id="k-pend">—</div><div class="k-sub" id="k-pend-pct">—</div></div>
@@ -498,6 +525,7 @@ tr.total-row td{border-top:2px solid #90a4ae;font-size:11px;color:var(--blue);}
       <button class="filter-btn" onclick="setFilter('low',this)">↓ Baixo progresso</button>
       <button class="filter-btn" onclick="setFilter('concluida',this)">✓ Concluídas</button>
       <input id="searchInput" type="text" placeholder="🔍 Buscar..." oninput="renderTable()">
+      <button class="btn-secondary" onclick="exportCSV()" title="Exportar tabela como CSV">⬇ CSV</button>
     </div>
   </div>
   <div class="table-wrap">
@@ -636,6 +664,7 @@ function connectFirebase() {
       firebase.initializeApp(config);
     }
     db = firebase.database();
+    fstore = firebase.firestore();
 
     // Test connection
     db.ref('.info/connected').on('value', snap => {
@@ -851,7 +880,8 @@ function showStatus(msg,type){const el=document.getElementById('parseStatus');el
 // PARSER
 // ═══════════════════════════════════════════════════
 function parseText(raw){
-  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
+  const lines = raw.split(/?
+/).map(l=>l.trim()).filter(l=>l.length>0);
 
   // Cabeçalho de rota — todos os formatos Meli
   const HDR = /^([A-Z][A-Z0-9]*[\d_][A-Z0-9]*|\d{2,4})\s*[·•]\s*#(\d+)/;
@@ -892,7 +922,8 @@ function parseText(raw){
 
   for(const bLines of blocks){
     if(!bLines || bLines.length===0) continue;
-    const block = bLines.join('\n');
+    const block = bLines.join('
+');
 
     const hdr = block.match(/^([A-Z][A-Z0-9]*[\d_][A-Z0-9]*|\d{2,4})\s*[·•]\s*#(\d+)/m);
     if(!hdr) continue;
@@ -923,7 +954,9 @@ function parseText(raw){
     if(spr===0){ const u=block.match(/(\d+)\s+unidades?/i); if(u) spr=+u[1]; }
     if(spr===0 && (sprEntrega+sprColeta)>0) spr=sprEntrega+sprColeta;
 
-    // OZH: "OZH\nHoras na área de entrega\n02:18 h"
+    // OZH: "OZH
+Horas na área de entrega
+02:18 h"
     const ozhM  = block.match(/OZH[\s\S]{0,60}?(\d{1,2}:\d{2})\s*h\b/i);
     // ORH Exec/Plan: "Executado 03:11hs Planejado 03:35hs"
     const execM = block.match(/Executado\s+(\d{1,2}:\d{2})\s*hs?/i);
@@ -1362,20 +1395,15 @@ Concluída`;
 // ═══════════════════════════════════════════════════
 // OPERATION TABS — isolated data per operation
 // ═══════════════════════════════════════════════════
-let currentOperation = 'SSP36';
+let currentOperation = 'SSP6';
 
-// Per-operation state cache (in memory)
-const opState = {
-  SSP36: { drivers: [], extras: {}, snapshots: [], pausedRoutes: [] },
-  SSP9:  { drivers: [], extras: {}, snapshots: [], pausedRoutes: [] },
-  SSP38: { drivers: [], extras: {}, snapshots: [], pausedRoutes: [] },
-  SSP29: { drivers: [], extras: {}, snapshots: [], pausedRoutes: [] },
-};
+// Per-operation state cache (in memory) — ordered numerically (SSP6 → SSP46)
+const OPERATIONS = ['SSP6','SSP9','SSP15','SSP17','SSP18','SSP20','SSP25','SSP27','SSP29','SSP36','SSP38','SSP45','SSP46'];
+const opState = OPERATIONS.reduce((acc, op) => {
+  acc[op] = { drivers: [], extras: {}, snapshots: [], pausedRoutes: [] };
+  return acc;
+}, {});
 
-// Firebase ref paths per operation
-function opRef(path) {
-  return db ? db.ref(currentOperation.toLowerCase().replace(/[^a-z0-9]/g,'_') + '/' + path) : null;
-}
 
 function switchOperation(op, btn) {
   if (op === currentOperation) return;
@@ -1405,6 +1433,8 @@ function switchOperation(op, btn) {
 
   // Update UI labels
   document.getElementById('opNameBadge').textContent = op;
+  const kRotasOp = document.getElementById('k-rotas-op');
+  if (kRotasOp) kRotasOp.textContent = op;
   document.title = 'Dashboard ' + op + ' · Mercado Envios';
 
   // Update tab styles
@@ -1441,9 +1471,35 @@ function switchOperation(op, btn) {
   if (ta) ta.placeholder = 'Cole aqui o texto copiado do monitoramento ' + op + '...';
 }
 
-// Override listenFirebase to use currentOperation prefix
-const _listenFirebase_orig = listenFirebase;
-
+// ═══════════════════════════════════════════════════
+// CSV EXPORT
+// ═══════════════════════════════════════════════════
+function exportCSV() {
+  if (!drivers.length) { alert('Sem dados para exportar.'); return; }
+  const headers = ['Rota','Motorista','SPR','Entregues','Pendentes','Falhas','DS%','Pkg/h','Status','OZH','ORH Exec','Atrasada','Mista'];
+  const rows = drivers.map(d => [
+    d.rota || '',
+    d.nome || '',
+    d.spr || 0,
+    d.ok || 0,
+    d.pend || 0,
+    d.fail || 0,
+    d.spr > 0 ? (d.ok / d.spr * 100).toFixed(1) : '0',
+    pkgPorHora(d) || '',
+    d.status || '',
+    d.ozh || '',
+    d.orhExec || '',
+    d.atrasada ? 'Sim' : 'Não',
+    d.isMista ? 'Sim' : 'Não',
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const date = new Date().toISOString().slice(0,10);
+  a.download = `dashboard_${currentOperation}_${date}.csv`;
+  a.click();
+}
 
 // Auto-connect with pre-configured credentials
 const PRE_CONFIG = {
@@ -1595,6 +1651,20 @@ async function confirmarFechamento() {
       });
     });
     await batch.commit();
+
+    // 3 — Registrar na fila de pendentes para o App Script processar
+    // Chave unica: OPERACAO_DATA_CICLO — evita duplicatas
+    const filaKey = currentOperation + '_' + data + '_' + ciclo;
+    const filaRef = fstore.collection('fila_pendente').doc(filaKey);
+    await filaRef.set({
+      operacao:   currentOperation,
+      data:       data,
+      ciclo:      ciclo,
+      operador:   operador,
+      timestamp:  ts,
+      processado: false,
+      totalRotas: drivers.length,
+    });
 
     statusEl.textContent = `✅ Turno ${ciclo} do dia ${data} salvo com sucesso! ${drivers.length} rotas gravadas no histórico.`;
     statusEl.className = 'ft-status ok';
