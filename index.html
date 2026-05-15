@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -880,8 +880,7 @@ function showStatus(msg,type){const el=document.getElementById('parseStatus');el
 // PARSER
 // ═══════════════════════════════════════════════════
 function parseText(raw){
-  const lines = raw.split(/?
-/).map(l=>l.trim()).filter(l=>l.length>0);
+  const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l.length>0);
 
   // Cabeçalho de rota — todos os formatos Meli
   const HDR = /^([A-Z][A-Z0-9]*[\d_][A-Z0-9]*|\d{2,4})\s*[·•]\s*#(\d+)/;
@@ -922,8 +921,7 @@ function parseText(raw){
 
   for(const bLines of blocks){
     if(!bLines || bLines.length===0) continue;
-    const block = bLines.join('
-');
+    const block = bLines.join('\n');
 
     const hdr = block.match(/^([A-Z][A-Z0-9]*[\d_][A-Z0-9]*|\d{2,4})\s*[·•]\s*#(\d+)/m);
     if(!hdr) continue;
@@ -954,9 +952,7 @@ function parseText(raw){
     if(spr===0){ const u=block.match(/(\d+)\s+unidades?/i); if(u) spr=+u[1]; }
     if(spr===0 && (sprEntrega+sprColeta)>0) spr=sprEntrega+sprColeta;
 
-    // OZH: "OZH
-Horas na área de entrega
-02:18 h"
+    // OZH: "OZH\nHoras na área de entrega\n02:18 h"
     const ozhM  = block.match(/OZH[\s\S]{0,60}?(\d{1,2}:\d{2})\s*h\b/i);
     // ORH Exec/Plan: "Executado 03:11hs Planejado 03:35hs"
     const execM = block.match(/Executado\s+(\d{1,2}:\d{2})\s*hs?/i);
